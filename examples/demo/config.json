@@ -1,5 +1,6 @@
 {
   "name": "greet-demo",
+  "plugins": ["../../plugins/person2.py"],
   "workdir": ".patchguard",
   "versions": {
     "base": {
