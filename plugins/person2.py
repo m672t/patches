@@ -105,16 +105,18 @@ def provide_tests(ctx) -> list[dict]:
             })
         return generated
 
+    # Per-transport quotas so stdin probes don't starve argv/file coverage.
     transport_counts = {
-       "stdin": 0,
-       "args": 0,
-       "files": 0,
+        "stdin": 0,
+        "args": 0,
+        "files": 0,
     }
     transport_limits = {
-       "stdin": 12,
-       "args": 6,
-       "files": 6,
+        "stdin": 12,
+        "args": 6,
+        "files": 6,
     }
+
     for seed_index, seed in enumerate(seeds):
         if len(generated) >= MAX_CASES:
             break
@@ -140,12 +142,17 @@ def provide_tests(ctx) -> list[dict]:
                 for label, payload, category in candidates:
                     if len(payload) > MAX_INPUT_BYTES:
                         continue
+                    if transport_counts["stdin"] >= transport_limits["stdin"]:
+                        break
                     t = _clone_for_check(
                         seed, f"p2_{seed_id}_stdin_{label}", category,
                         f"generated {label} stdin probe from {seed_id}; no oracle inferred",
                     )
                     t["stdin"] = _hex_spec(payload)
+                    before = len(generated)
                     add(t)
+                    if len(generated) > before:
+                        transport_counts["stdin"] += 1
                     if len(generated) >= MAX_CASES:
                         break
 
@@ -157,6 +164,8 @@ def provide_tests(ctx) -> list[dict]:
         for index in positional[:2]:
             for label, value in (("empty", ""), ("one", "A"),
                                  ("long64", "A" * 64), ("long256", "A" * 256)):
+                if transport_counts["args"] >= transport_limits["args"]:
+                    break
                 mutated = list(args)
                 mutated[index] = value
                 t = _clone_for_check(
@@ -164,7 +173,10 @@ def provide_tests(ctx) -> list[dict]:
                     f"generated argv {label} probe from {seed_id}; no oracle inferred",
                 )
                 t["args"] = mutated
+                before = len(generated)
                 add(t)
+                if len(generated) > before:
+                    transport_counts["args"] += 1
                 if len(generated) >= MAX_CASES:
                     break
             if len(generated) >= MAX_CASES:
@@ -187,6 +199,8 @@ def provide_tests(ctx) -> list[dict]:
             for label, payload, category in candidates:
                 if len(payload) > MAX_INPUT_BYTES:
                     continue
+                if transport_counts["files"] >= transport_limits["files"]:
+                    break
                 t = _clone_for_check(
                     seed, f"p2_{seed_id}_file_{_safe_id(filename)}_{label}", category,
                     f"generated file {label} probe for {filename}; no oracle inferred",
@@ -194,7 +208,10 @@ def provide_tests(ctx) -> list[dict]:
                 new_files = dict(files)
                 new_files[filename] = _hex_spec(payload)
                 t["files"] = new_files
+                before = len(generated)
                 add(t)
+                if len(generated) > before:
+                    transport_counts["files"] += 1
                 if len(generated) >= MAX_CASES:
                     break
             if len(generated) >= MAX_CASES:
