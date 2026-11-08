@@ -1,0 +1,3 @@
+.patchguard/
+__pycache__/
+*.pyc

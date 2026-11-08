@@ -1,0 +1,13 @@
+[project]
+name = "patchguard"
+version = "1.0.0"
+description = "Dynamic security-patch validation and regression detection for CI/CD"
+requires-python = ">=3.9"
+dependencies = []
+
+[project.scripts]
+patchguard = "patchguard.cli:main"
+
+[build-system]
+requires = ["setuptools>=61"]
+build-backend = "setuptools.build_meta"
