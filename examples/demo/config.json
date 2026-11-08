@@ -1,0 +1,107 @@
+{
+  "name": "greet-demo",
+  "workdir": ".patchguard",
+  "versions": {
+    "base": {
+      "path": "base"
+    },
+    "patched": {
+      "path": "correct"
+    }
+  },
+  "build": {
+    "modes": {
+      "release": {
+        "cmd": "gcc -O2 -g -fstack-protector-strong -D_FORTIFY_SOURCE=2 -fPIE -pie -Wl,-z,relro,-z,now -o greet greet.c",
+        "binary": "greet"
+      },
+      "sanitized": {
+        "cmd": "gcc -O1 -g -fno-inline -fno-omit-frame-pointer -U_FORTIFY_SOURCE -fno-stack-protector -fsanitize=address,undefined -o greet greet.c",
+        "binary": "greet"
+      },
+      "coverage": {
+        "cmd": "gcc -O0 -g --coverage -o greet greet.c",
+        "binary": "greet"
+      }
+    }
+  },
+  "run": {
+    "timeout": 5,
+    "repeats": 3
+  },
+  "tests": [
+    {
+      "id": "poc_original",
+      "category": "exploit",
+      "role": "target",
+      "description": "original PoC: 40-byte name",
+      "stdin": {
+        "text": "A",
+        "repeat": 40,
+        "suffix": "\n"
+      }
+    },
+    {
+      "id": "poc_variant_20",
+      "category": "exploit",
+      "role": "variant",
+      "description": "different input reaching the same overflow (20 bytes)",
+      "stdin": {
+        "text": "B",
+        "repeat": 20,
+        "suffix": "\n"
+      }
+    },
+    {
+      "id": "boundary_16",
+      "category": "boundary",
+      "role": "variant",
+      "description": "off-by-one: 16 chars + NUL into buf[16]",
+      "stdin": {
+        "text": "C",
+        "repeat": 16,
+        "suffix": "\n"
+      }
+    },
+    {
+      "id": "func_valid_short",
+      "category": "functional",
+      "description": "valid short name",
+      "stdin": "alice\n",
+      "expect": {
+        "exit_code": 0,
+        "stdout": "hello alice\n"
+      }
+    },
+    {
+      "id": "func_valid_15",
+      "category": "functional",
+      "description": "longest valid name (15)",
+      "stdin": "abcdefghijklmno\n",
+      "expect": {
+        "exit_code": 0,
+        "stdout": "hello abcdefghijklmno\n"
+      }
+    },
+    {
+      "id": "invalid_empty",
+      "category": "invalid",
+      "description": "empty name must be rejected with exit 1",
+      "stdin": "\n",
+      "expect": {
+        "exit_code": 1
+      }
+    },
+    {
+      "id": "boundary_name_Z",
+      "category": "boundary",
+      "role": "check",
+      "description": "name starting with Z (exercises a branch only some patches touch)",
+      "stdin": "Zebra\n",
+      "expect": {
+        "exit_code": 0,
+        "stdout": "hello Zebra\n"
+      }
+    }
+  ]
+}
